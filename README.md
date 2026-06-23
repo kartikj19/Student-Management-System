@@ -69,4 +69,6 @@ Contributions are welcome! If you'd like to contribute, please follow these step
 
 Feel free to reach out for any questions or collaborations:
 
-- [LinkedIn](https://linkedin.com/in/csepriyaranjan)
+- [LinkedIn](www.linkedin.com/in/
+kartik-jangir-a2143928b
+)

@@ -209,7 +209,7 @@ int main() {
                 Delete_an_data();
                 break;
             default:
-            cout << "Hi !  www.github.com/csepriyaranajan ";
+            cout << "Hi ! ";
         };
         cin.clear();
         fflush(stdin);

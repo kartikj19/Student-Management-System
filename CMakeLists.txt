@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.14)
 project(StudentManagementSystem VERSION 2.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -11,41 +11,50 @@ else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic")
 endif()
 
-# Try to find system SQLite3, but don't fail if not found
+# SQLite3 handling - try system first, then embedded
 find_package(SQLite3 QUIET)
 
-# If SQLite3 not found, use FetchContent to download bundled version
 if(NOT SQLite3_FOUND)
-    message(STATUS "System SQLite3 not found. Downloading bundled SQLite3...")
-    include(FetchContent)
+    message(STATUS "System SQLite3 not found. Using embedded SQLite3 source.")
     
-    FetchContent_Declare(
-        sqlite_amalgamation
-        URL https://www.sqlite.org/2024/sqlite-amalgamation-3460100.zip
-        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-        QUIET
-    )
+    # Create sqlite3 library from source
+    # Using the built-in SQLite amalgamation approach
+    file(WRITE "${CMAKE_BINARY_DIR}/sqlite3_config.h" "
+#define SQLITE_THREADSAFE 1
+#define SQLITE_ENABLE_FTS3 1
+#define SQLITE_ENABLE_JSON1 1
+")
     
-    FetchContent_MakeAvailable(sqlite_amalgamation)
-    
-    # Create a library from the SQLite3 amalgamation
-    add_library(sqlite3_bundled STATIC 
-        "${sqlite_amalgamation_SOURCE_DIR}/sqlite3.c"
-    )
-    
-    target_include_directories(sqlite3_bundled PUBLIC
-        "${sqlite_amalgamation_SOURCE_DIR}"
-    )
-    
-    # Suppress warnings from SQLite3 source
-    if(MSVC)
-        target_compile_options(sqlite3_bundled PRIVATE /W0)
-    else()
-        target_compile_options(sqlite3_bundled PRIVATE -w)
+    # Download SQLite source if not present
+    if(NOT EXISTS "${CMAKE_BINARY_DIR}/sqlite3.c")
+        message(STATUS "Downloading SQLite3 source...")
+        file(DOWNLOAD
+            "https://www.sqlite.org/2024/sqlite-amalgamation-3460100.zip"
+            "${CMAKE_BINARY_DIR}/sqlite3.zip"
+            SHOW_PROGRESS
+        )
+        
+        execute_process(
+            COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_BINARY_DIR}/sqlite3.zip"
+            WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+        )
+        
+        file(COPY "${CMAKE_BINARY_DIR}/sqlite-amalgamation-3460100/sqlite3.c" 
+             DESTINATION "${CMAKE_BINARY_DIR}")
+        file(COPY "${CMAKE_BINARY_DIR}/sqlite-amalgamation-3460100/sqlite3.h" 
+             DESTINATION "${CMAKE_BINARY_DIR}")
     endif()
     
-    # Create an alias for consistency
-    add_library(SQLite::SQLite3 ALIAS sqlite3_bundled)
+    add_library(sqlite3 STATIC "${CMAKE_BINARY_DIR}/sqlite3.c")
+    target_include_directories(sqlite3 PUBLIC "${CMAKE_BINARY_DIR}")
+    
+    if(MSVC)
+        target_compile_options(sqlite3 PRIVATE /W0)
+    else()
+        target_compile_options(sqlite3 PRIVATE -w)
+    endif()
+    
+    add_library(SQLite::SQLite3 ALIAS sqlite3)
 else()
     message(STATUS "Using system SQLite3")
 endif()

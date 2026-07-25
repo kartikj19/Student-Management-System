@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(StudentManagementSystem VERSION 2.0.0 LANGUAGES CXX)
+project(StudentManagementSystem VERSION 2.0.0 LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -62,6 +62,8 @@ add_library(sqlite3 STATIC "${SQLITE3_SOURCE_DIR}/sqlite3.c")
 target_include_directories(sqlite3 PUBLIC 
     "${SQLITE3_SOURCE_DIR}"
 )
+
+set_target_properties(sqlite3 PROPERTIES LANGUAGE C)
 
 # Suppress warnings from SQLite3 source
 if(MSVC)

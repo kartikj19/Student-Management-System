@@ -11,55 +11,68 @@ else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wpedantic")
 endif()
 
-# SQLite3 handling - try system first, then embedded
-find_package(SQLite3 QUIET)
+# =============================================================================
+# SQLite3 - Download and build from source
+# =============================================================================
+message(STATUS "Setting up SQLite3 from source...")
 
-if(NOT SQLite3_FOUND)
-    message(STATUS "System SQLite3 not found. Using embedded SQLite3 source.")
+set(SQLITE3_SOURCE_DIR "${CMAKE_BINARY_DIR}/sqlite3_source")
+set(SQLITE3_ZIP "${CMAKE_BINARY_DIR}/sqlite3.zip")
+
+# Download SQLite3 if not already present
+if(NOT EXISTS "${SQLITE3_SOURCE_DIR}/sqlite3.c")
+    message(STATUS "Downloading SQLite3 source code...")
     
-    # Create sqlite3 library from source
-    # Using the built-in SQLite amalgamation approach
-    file(WRITE "${CMAKE_BINARY_DIR}/sqlite3_config.h" "
-#define SQLITE_THREADSAFE 1
-#define SQLITE_ENABLE_FTS3 1
-#define SQLITE_ENABLE_JSON1 1
-")
+    file(DOWNLOAD 
+        "https://www.sqlite.org/2024/sqlite-amalgamation-3460100.zip"
+        "${SQLITE3_ZIP}"
+        SHOW_PROGRESS
+        STATUS DOWNLOAD_STATUS
+    )
     
-    # Download SQLite source if not present
-    if(NOT EXISTS "${CMAKE_BINARY_DIR}/sqlite3.c")
-        message(STATUS "Downloading SQLite3 source...")
-        file(DOWNLOAD
-            "https://www.sqlite.org/2024/sqlite-amalgamation-3460100.zip"
-            "${CMAKE_BINARY_DIR}/sqlite3.zip"
-            SHOW_PROGRESS
-        )
-        
-        execute_process(
-            COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_BINARY_DIR}/sqlite3.zip"
-            WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
-        )
-        
-        file(COPY "${CMAKE_BINARY_DIR}/sqlite-amalgamation-3460100/sqlite3.c" 
-             DESTINATION "${CMAKE_BINARY_DIR}")
-        file(COPY "${CMAKE_BINARY_DIR}/sqlite-amalgamation-3460100/sqlite3.h" 
-             DESTINATION "${CMAKE_BINARY_DIR}")
+    list(GET DOWNLOAD_STATUS 0 DOWNLOAD_CODE)
+    if(NOT DOWNLOAD_CODE EQUAL 0)
+        message(FATAL_ERROR "Failed to download SQLite3. Check your internet connection.")
     endif()
     
-    add_library(sqlite3 STATIC "${CMAKE_BINARY_DIR}/sqlite3.c")
-    target_include_directories(sqlite3 PUBLIC "${CMAKE_BINARY_DIR}")
+    # Extract the zip file
+    message(STATUS "Extracting SQLite3 source...")
+    execute_process(
+        COMMAND ${CMAKE_COMMAND} -E tar xzf "${SQLITE3_ZIP}"
+        WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+        RESULT_VARIABLE TAR_RESULT
+    )
     
-    if(MSVC)
-        target_compile_options(sqlite3 PRIVATE /W0)
-    else()
-        target_compile_options(sqlite3 PRIVATE -w)
+    if(NOT TAR_RESULT EQUAL 0)
+        message(FATAL_ERROR "Failed to extract SQLite3 source")
     endif()
     
-    add_library(SQLite::SQLite3 ALIAS sqlite3)
-else()
-    message(STATUS "Using system SQLite3")
+    # Move extracted files to expected location
+    file(RENAME 
+        "${CMAKE_BINARY_DIR}/sqlite-amalgamation-3460100"
+        "${SQLITE3_SOURCE_DIR}"
+    )
 endif()
 
-# Main executable
+message(STATUS "SQLite3 source ready at ${SQLITE3_SOURCE_DIR}")
+
+# Create SQLite3 static library
+add_library(sqlite3 STATIC "${SQLITE3_SOURCE_DIR}/sqlite3.c")
+
+target_include_directories(sqlite3 PUBLIC 
+    "${SQLITE3_SOURCE_DIR}"
+)
+
+# Suppress warnings from SQLite3 source
+if(MSVC)
+    target_compile_options(sqlite3 PRIVATE /W0)
+else()
+    target_compile_options(sqlite3 PRIVATE -w)
+endif()
+
+# =============================================================================
+# Main application
+# =============================================================================
 add_executable(student_management_system
     src/main.cpp
     src/database.cpp
@@ -73,16 +86,18 @@ add_executable(student_management_system
 
 target_include_directories(student_management_system PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    "${SQLITE3_SOURCE_DIR}"
 )
 
 target_link_libraries(student_management_system PRIVATE
-    SQLite::SQLite3
+    sqlite3
 )
 
-# Enable testing
+# =============================================================================
+# Tests
+# =============================================================================
 enable_testing()
 
-# Tests executable
 add_executable(tests
     tests/test_main.cpp
     tests/test_student.cpp
@@ -98,10 +113,14 @@ add_executable(tests
 
 target_include_directories(tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    "${SQLITE3_SOURCE_DIR}"
 )
 
 target_link_libraries(tests PRIVATE
-    SQLite::SQLite3
+    sqlite3
 )
 
 add_test(NAME AllTests COMMAND tests)
+
+message(STATUS "Build configured successfully!")
+message(STATUS "Run 'mingw32-make' or 'make' to build")

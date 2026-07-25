@@ -5,7 +5,7 @@
 - **C++ Standard**: C++17 or later
 - **Compiler**: GCC 7+, Clang 5+, MSVC 2017+
 - **CMake**: Version 3.16 or later
-- **SQLite3**: Development libraries
+- **SQLite3**: Bundled in-repo fallback if system development libraries are unavailable
 - **Catch2**: For testing (optional)
 
 ## Linux/macOS
@@ -64,9 +64,7 @@ student_management_system
 
 1. Install **Visual Studio 2019** or later (Community Edition is free)
 2. Install **CMake** from https://cmake.org/download/
-3. Install **SQLite3**:
-   - Download from https://www.sqlite.org/download.html
-   - Or use vcpkg: `vcpkg install sqlite3:x64-windows`
+3. SQLite3 installation is optional (the build uses bundled SQLite source if not found)
 
 ### Build Steps
 
@@ -98,7 +96,7 @@ Release\student_management_system.exe
 
 1. Install **MinGW** with GCC 7 or later
 2. Install **CMake** from https://cmake.org/download/
-3. Install **SQLite3** development files
+3. SQLite3 installation is optional (the build uses bundled SQLite source if not found)
 
 ### Build Steps
 
@@ -164,7 +162,7 @@ ctest -R test_student -V
 ### SQLite3 not found
 - **Linux**: `sudo apt-get install libsqlite3-dev`
 - **macOS**: `brew install sqlite3`
-- **Windows**: Download from https://www.sqlite.org/ or use vcpkg
+- **Windows**: No manual install required; CMake uses bundled SQLite source
 
 ### Compiler errors
 - Ensure you're using C++17 or later
@@ -174,7 +172,7 @@ ctest -R test_student -V
 ### Build errors on Windows
 - Make sure Visual Studio is fully installed
 - Run from Developer Command Prompt
-- Check that SQLite3 development files are properly configured
+- Ensure `third_party/sqlite/` exists (contains bundled SQLite source files)
 
 ## Clean Build
 

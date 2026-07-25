@@ -74,7 +74,7 @@ Student-Management-System/
 ### Prerequisites
 - C++17 compatible compiler (GCC, Clang, or MSVC)
 - CMake 3.16+
-- SQLite3 development files
+- SQLite3 development files (optional; bundled fallback is included in-repo)
 - Catch2 (for testing)
 
 ### Linux/macOS
@@ -101,9 +101,6 @@ ctest
 ### Windows (MSVC)
 
 ```bash
-# Install SQLite3 development files
-# Download from: https://www.sqlite.org/download.html
-
 # Build with CMake
 mkdir build
 cd build
